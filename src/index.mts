@@ -1,12 +1,9 @@
+import './env.mjs';
 import chalk from "chalk";
 import inquirer from 'inquirer';
 import { createSpinner, Spinner } from 'nanospinner';
+import { _register } from "./user.mjs";
 
-import { register, _register } from "./user.mjs";
-
-import dotenv from "dotenv";
-
-dotenv.config();
 
 export const sleep = (ms = 1000) : Promise<any> => new Promise((r) => setTimeout(r, ms));
 

@@ -157,7 +157,7 @@ export const getName = (gender: gender = undefined ) : nameType => {
  * @param provider The provider (or domain) which ends with `@`.
  * @param options Should contain first name and/or last name or none or both.
  * @param genUsername Flag to generate an username.
- * @returns 
+ * @returns A Promise containing the details of the user & response.
  */
 export const _register = async (provider: string | undefined, options: registerOpts | null = null, genUsername: boolean = false) : Promise<_register> => {
     
@@ -200,6 +200,12 @@ export const _register = async (provider: string | undefined, options: registerO
     return resp;
 }
 
+/**
+ * Method to register the user with email address & password
+ * 
+ * @param param0 The basic email address and password as an object.
+ * @returns The details of the user as a reponse.
+ */
 export const register = async ( { address, password } : user) : Promise<register> => {
     const response = await api.post('/accounts', {
         address,
@@ -221,6 +227,12 @@ export const register = async ( { address, password } : user) : Promise<register
     return error;
 };
 
+/**
+ * Login to the mail server with address & password. 
+ * 
+ * @param param0 The basic email address and password as an object.
+ * @returns The promise resulting in the login to mail with a bearer token.
+ */
 export const login = async ( { address, password } : user ) : Promise<login> => {
     const response = await api.post("/token", {
         address,

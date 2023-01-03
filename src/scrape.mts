@@ -1,14 +1,42 @@
-import puppeteer from 'puppeteer-extra';
-import AdblockerPlugin from 'puppeteer-extra-plugin-adblocker';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import dotenv from 'dotenv';
+import path from 'node:path';
+import './env.mjs'
 import { sleep } from './index.mjs';
 import { getName, _register, genderTypes } from './user.mjs';
 import { ElementHandle } from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
+import AdblockerPlugin from 'puppeteer-extra-plugin-adblocker';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
-dotenv.config();
-
+// Anonymize the User Agent when lauching the browser...
 const AnonymizePlugin = await import("puppeteer-extra-plugin-anonymize-ua");
+
+// Additional Check
+if( 'EXECUTABLE_PATH' in process.env && process.env.executablePath?.length == 0 ) {
+    delete process.env['EXECUTABLE_PATH'];
+}
+
+// Fixed bug where `puppeteer-core` does not lauch without an executable
+if( ! ( 'EXECUTABLE_PATH' in process.env ) ) {
+    // code spillitng technique..
+    // Commonly used in React.js so that Vite like builders can easily tree-shake & split code.
+    const tmp = await import('puppeteer');
+    const executablePath = tmp.executablePath();
+    
+    const { default: chalk } = await import("chalk");
+
+    if( executablePath.length == 0 || path.resolve(executablePath) !== executablePath ) {
+        // 😞 Could not find the path
+        throw new Error(`Sorry we could not find a valid executable path for the browser instance. Set an enviroment variable poiting to a valid executable path: 
+            ${chalk.bold("EXECUTABLE_PATH")}=${chalk.red.italic('usr/path/to/executable')}
+        `);
+    }
+    
+    console.warn(`Sorry executable path of the browser was not found. We are using the default ${chalk.bold.italic(executablePath)} for the rest of the operation. If you want to override the feature please set an enviroment variable:
+        ${chalk.bold("EXECUTABLE_PATH")}=${chalk.red.italic('usr/path/to/executable')}
+    `)
+
+    process.env['EXECUTABLE_PATH'] = executablePath;
+}
 
 if (! ( 'headless' in process.env ) ){
     // So this is headless...
@@ -16,14 +44,16 @@ if (! ( 'headless' in process.env ) ){
 }
 
 const headless = process.env.HEADLESS === 'true' ? true : false
+const executablePath = process.env.EXECUTABLE_PATH;
 
 puppeteer.use(StealthPlugin());
 puppeteer.use(AnonymizePlugin.default());
 puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
 
 const browser = await puppeteer.launch( 
-    { 
-        headless, 
+    {
+        executablePath,
+        headless,
 		defaultViewport: null,
 		ignoreDefaultArgs: ['--disable-extensions'],
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--use-fake-ui-for-media-stream', '--start-maximized', ], 
@@ -57,13 +87,6 @@ type element = {
 };
 
 const selector = (selector: string, key: string, value: ElementHandle | undefined | null ) => {
-    console.log(
-        {
-            selector,
-            entry: key,
-            handle: value,
-        } 
-    );
     return {
         selector,
         entry: key,
@@ -100,8 +123,6 @@ const elements: element[] = await Promise.all([
         return selector( 'input[type="password"]', 'password', undefined )
     })
 ]).then( values => values.filter( (value) => typeof value.handle !== 'undefined' ));
-
-console.log(elements);
 
 const { firstName, lastName, fullName ="" } = getName(genderTypes.MALE);
 const { address = "", password = "", username = "", success} = await _register(process.env?.GW_DOMAIN ?? process.env?.TM_DOMAIN ?? undefined, {
